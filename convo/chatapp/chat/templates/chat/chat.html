@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .chat-box { width: 400px; height: 500px; overflow-y: scroll; border: 1px solid black; padding: 10px; }
+        .input-box { width: 400px; display: flex; margin-top: 10px; }
+        .input-box input { flex: 1; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Chat with Admin</h2>
+    <div class="chat-box" id="chat-box"></div>
+
+    <div class="input-box">
+        <input type="text" id="messageInput" placeholder="Type a message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let chatSocket = new WebSocket("ws://" + window.location.host + "/ws/chat/");
+
+        chatSocket.onmessage = function(event) {
+            let data = JSON.parse(event.data);
+            let chatBox = document.getElementById("chat-box");
+            let messageElement = document.createElement("div");
+            messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll to the latest message
+        };
+
+        function sendMessage() {
+            let messageInput = document.getElementById("messageInput");
+            let message = messageInput.value;
+            if (message.trim() !== "") {
+                chatSocket.send(JSON.stringify({ "message": message }));
+                messageInput.value = "";
+            }
+        }
+    </script>
+</body>
+</html>
+
