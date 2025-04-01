@@ -1,0 +1,14 @@
+[Unit]
+Description=Daphne ASGI Server
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/<_folder_where_git_repo_is_>/convo/chatapp
+ExecStart=/home/ubuntu/<_folder_where_git_repo_is_>/convo/venv/bin/daphne -b 0.0.0.0 -p 8001 chatapp.asgi:application
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

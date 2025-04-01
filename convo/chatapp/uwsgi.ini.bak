@@ -1,0 +1,8 @@
+[uwsgi]
+chdir = /home/ubuntu/<_folder_where_git_repo_is_>/secret-chat/convo/chatapp
+module = chatapp.wsgi:application
+home = /home/ubuntu/<_folder_where_git_repo_is_>/convo/venv
+socket = /home/ubuntu/<_folder_where_git_repo_is_>/convo/chatapp/chatapp.sock
+chmod-socket = 666
+vacuum = true
+

@@ -1,46 +1,800 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
+    <title>Chat with Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; }
-        .chat-box { width: 400px; height: 500px; overflow-y: scroll; border: 1px solid black; padding: 10px; }
-        .input-box { width: 400px; display: flex; margin-top: 10px; }
-        .input-box input { flex: 1; padding: 5px; }
-    </style>
-</head>
-<body>
-    <h2>Chat with Admin</h2>
-    <div class="chat-box" id="chat-box"></div>
-
-    <div class="input-box">
-        <input type="text" id="messageInput" placeholder="Type a message...">
-        <button onclick="sendMessage()">Send</button>
-    </div>
-
-    <script>
-        let chatSocket = new WebSocket("ws://" + window.location.host + "/ws/chat/");
-
-        chatSocket.onmessage = function(event) {
-            let data = JSON.parse(event.data);
-            let chatBox = document.getElementById("chat-box");
-            let messageElement = document.createElement("div");
-            messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
-            chatBox.appendChild(messageElement);
-            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll to the latest message
-        };
-
-        function sendMessage() {
-            let messageInput = document.getElementById("messageInput");
-            let message = messageInput.value;
-            if (message.trim() !== "") {
-                chatSocket.send(JSON.stringify({ "message": message }));
-                messageInput.value = "";
+        :root {
+            --bg-dark: #0A0A12;
+            --lavender: #B57EDC;
+            --lavender-dark: #8A4EBF;
+            --lavender-light: #D8B8FF;
+            --text: #E0E0FF;
+            --text-light: #FFFFFF;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-highlight: rgba(255, 255, 255, 0.3);
+            --chat-bg: rgba(10, 10, 18, 0.7);
+            --user-msg: #8A4EBF;
+            --admin-msg: #3A3A5A;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Rajdhani', 'Arial Narrow', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            cursor: none;
+        }
+        /* Electric Current Cursor */
+        .electric-current {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 0 10px 2px var(--lavender-light);
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: screen;
+        }
+        .electric-trail {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9998;
+        }
+        .electric-particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 5px 1px var(--lavender-light);
+            opacity: 0;
+        }
+        /* Thunderstorm Background */
+        .thunderstorm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                linear-gradient(to bottom,
+                    rgba(5, 5, 15, 0.9) 0%,
+                    rgba(10, 5, 20, 0.95) 100%),
+                url('https://assets.codepen.io/13471/smoke.png'),
+                url('https://assets.codepen.io/13471/rain.png');
+            animation:
+                lightning 15s infinite,
+                rain 0.5s linear infinite;
+            z-index: 0;
+        }
+        @keyframes rain {
+            0% { background-position: 0 0, 0 0, 0 0; }
+            100% { background-position: 0 0, 0 0, 0 500px; }
+        }
+        @keyframes lightning {
+            0%, 85%, 87%, 89%, 91%, 93%, 100% { opacity: 0; }
+            86%, 88%, 90%, 92% { opacity: 0.4; }
+        }
+        /* Chat Container */
+        .content {
+            background: var(--chat-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            box-shadow:
+                0 0 20px rgba(181, 126, 220, 0.3),
+                0 0 40px rgba(10, 10, 18, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+        /* Chat Title */
+        h2 {
+            color: var(--text-light);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            text-shadow: 0 0 10px var(--lavender);
+        }
+        h2::after {
+            content: 'Chat with Admin';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -20px;
+            color: transparent;
+            background: linear-gradient(
+                to bottom,
+                rgba(181, 126, 220, 0.3),
+                transparent 80%
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            transform: scaleY(-1);
+            opacity: 0.7;
+        }
+        /* Chat Box */
+        .chat-box {
+            width: 100%;
+            height: 350px;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            background: rgba(5, 5, 15, 0.4);
+            border: 1px solid var(--glass-border);
+            scrollbar-width: thin;
+            scrollbar-color: var(--lavender) transparent;
+        }
+        .chat-box::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-box::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-box::-webkit-scrollbar-thumb {
+            background-color: var(--lavender);
+            border-radius: 3px;
+        }
+        /* Message Container */
+        .message-container {
+            width: 100%;
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .message-container.user {
+            justify-content: flex-end;
+        }
+        .message-container.admin {
+            justify-content: flex-start;
+        }
+        /* Message Styles */
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            position: relative;
+            animation: messageAppear 0.3s ease-out;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            text-align: left;
+        }
+        @keyframes messageAppear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user-message {
+            background: var(--user-msg);
+            border-bottom-right-radius: 4px;
+            color: white;
+            margin-left: auto;
+        }
+        .admin-message {
+            background: var(--admin-msg);
+            border-bottom-left-radius: 4px;
+            color: var(--text-light);
+            margin-right: auto;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .message-username {
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: var(--lavender-light);
+        }
+        .message-content {
+            margin-bottom: 4px;
+        }
+        .message-footer {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .user-message .message-footer {
+            justify-content: flex-start;
+        }
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            display: inline-block;
+        }
+        /* Input Box */
+        .input-box {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+        .input-box input {
+            flex: 1;
+            padding: 12px 15px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 1rem;
+            font-family: 'Rajdhani', sans-serif;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow:
+                0 0 10px rgba(181, 126, 220, 0.1),
+                inset 0 1px 1px var(--glass-highlight);
+        }
+        .input-box input:focus {
+            outline: none;
+            border-color: var(--lavender);
+            box-shadow:
+                0 0 20px var(--lavender),
+                inset 0 1px 1px var(--glass-highlight);
+        }
+        .input-box input::placeholder {
+            color: var(--text);
+            opacity: 0.7;
+        }
+        .input-box button {
+            padding: 0 20px;
+            border-radius: 8px;
+            cursor: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--glass-border);
+            position: relative;
+            overflow: hidden;
+            background: var(--glass);
+            backdrop-filter: blur(5px);
+            color: var(--text-light);
+            box-shadow:
+                0 0 10px rgba(181, 126, 220, 0.3),
+                inset 0 1px 1px var(--glass-highlight);
+            font-weight: 600;
+        }
+        .input-box button:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 0 20px var(--lavender),
+                inset 0 1px 1px var(--glass-highlight);
+            border-color: var(--lavender);
+        }
+        .input-box button:active {
+            transform: translateY(1px);
+        }
+        /* Typing Indicator */
+        .typing-indicator {
+            display: inline-flex;
+            padding: 10px 15px;
+            background: var(--admin-msg);
+            border-radius: 18px;
+            margin-bottom: 15px;
+            border-bottom-left-radius: 4px;
+            align-items: center;
+            gap: 5px;
+        }
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--lavender-light);
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        /* Smoke Effect */
+        .smoke {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://assets.codepen.io/13471/smoke.png');
+            animation: smoke 20s linear infinite;
+            opacity: 0.15;
+            z-index: 1;
+            pointer-events: none;
+        }
+        /* White Smoke Effect */
+        .white-smoke {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://assets.codepen.io/13471/smoke.png');
+            animation: smoke 25s linear infinite;
+            opacity: 0;
+            z-index: 3;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            filter: brightness(5);
+            transition: opacity 1s ease;
+        }
+        @keyframes smoke {
+            0% { background-position: 0 0; }
+            100% { background-position: 1000px 0; }
+        }
+        /* Lightning Effects */
+        .lightning-bolt {
+            position: fixed;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, white, transparent);
+            transform-origin: top center;
+            pointer-events: none;
+            z-index: 9997;
+            opacity: 0;
+            box-shadow: 0 0 15px white;
+        }
+        .lightning-branch {
+            position: absolute;
+            width: 1px;
+            background: white;
+            transform-origin: top center;
+            pointer-events: none;
+            z-index: 9996;
+            opacity: 0;
+            box-shadow: 0 0 5px white;
+        }
+        /* Flash Effect */
+        .flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9995;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .content {
+                padding: 1.2rem;
+                width: 95%;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            .chat-box {
+                height: 300px;
+            }
+            .message {
+                max-width: 90%;
+            }
+            .input-box input, .input-box button {
+                padding: 10px;
             }
         }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="thunderstorm"></div>
+    <div class="smoke"></div>
+    <div class="white-smoke"></div>
+    <div class="electric-current"></div>
+    <div class="electric-trail"></div>
+    <div class="flash"></div>
+    
+    <div class="content">
+        <h2>Chat with Admin</h2>
+        <div class="chat-box" id="chat-box"></div>
+        
+        <div class="input-box">
+            <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
+            <button id="sendButton" onclick="sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    
+    <audio id="hoverSound" src="{% static 'sounds/hover.mp3' %}"></audio>
+    <audio id="clickSound" src="{% static 'sounds/click.mp3' %}"></audio>
+    <audio id="thunderSound" src="{% static 'sounds/thunder.mp3' %}" loop></audio>
+    <audio id="lightningSound" src="{% static 'sounds/lightning.mp3' %}"></audio>
+    <audio id="electricSound" src="{% static 'sounds/electric.mp3' %}" loop></audio>
+    <audio id="messageSound" src="{% static 'sounds/message.mp3' %}"></audio>
+    
+    <script>
+        // Enhanced sound effects
+        function playHoverSound() {
+            const sound = document.getElementById("hoverSound");
+            sound.currentTime = 0;
+            sound.volume = 0.3;
+            sound.play();
+        }
+        function playClickSound() {
+            const sound = document.getElementById("clickSound");
+            sound.currentTime = 0;
+            sound.volume = 0.2;
+            sound.play();
+        }
+        function playLightningSound() {
+            const sound = document.getElementById("lightningSound");
+            sound.currentTime = 0;
+            sound.volume = 0.4;
+            sound.play();
+        }
+        function playElectricSound() {
+            const sound = document.getElementById("electricSound");
+            sound.currentTime = 0;
+            sound.volume = 0.2;
+            sound.play();
+        }
+        function playMessageSound() {
+            const sound = document.getElementById("messageSound");
+            sound.currentTime = 0;
+            sound.volume = 0.3;
+            sound.play();
+        }
+        // Thunder sound with random timing
+        function playThunder() {
+            const sound = document.getElementById("thunderSound");
+            sound.volume = 0.15;
+            sound.play();
+            // Random thunder strikes
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    sound.currentTime = 0;
+                    sound.volume = 0.1 + Math.random() * 0.1;
+                    sound.play();
+                }
+            }, 10000);
+        }
+        // Electric current following cursor
+        const cursor = document.querySelector('.electric-current');
+        const trail = document.querySelector('.electric-trail');
+        let particles = [];
+        let lastPos = { x: 0, y: 0 };
+        
+        // Create electric particles
+        function createParticles(x, y) {
+            for (let i = 0; i < 3; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'electric-particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                trail.appendChild(particle);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 5 + Math.random() * 15;
+                const duration = 0.2 + Math.random() * 0.3;
+                
+                particles.push({
+                    element: particle,
+                    x: x,
+                    y: y,
+                    targetX: x + Math.cos(angle) * distance,
+                    targetY: y + Math.sin(angle) * distance,
+                    duration: duration,
+                    time: 0
+                });
+            }
+        }
+        // Update particles
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.time += 0.016;
+                const progress = Math.min(particle.time / particle.duration, 1);
+                
+                const x = particle.x + (particle.targetX - particle.x) * progress;
+                const y = particle.y + (particle.targetY - particle.y) * progress;
+                
+                particle.element.style.left = x + 'px';
+                particle.element.style.top = y + 'px';
+                particle.element.style.opacity = 1 - progress;
+                
+                if (progress === 1) {
+                    trail.removeChild(particle.element);
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        // Follow mouse movement
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            cursor.style.left = x + 'px';
+            cursor.style.top = y + 'px';
+            
+            // Create electric trail
+            const dx = x - lastPos.x;
+            const dy = y - lastPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 5) {
+                createParticles(x, y);
+                lastPos = { x, y };
+            }
+        });
+        // Create realistic branching lightning
+        function createLightning(x, y, length, branches = 3, angle = -Math.PI/2) {
+            playLightningSound();
+            
+            // Main bolt
+            const bolt = document.createElement('div');
+            bolt.className = 'lightning-bolt';
+            bolt.style.left = x + 'px';
+            bolt.style.top = y + 'px';
+            bolt.style.height = length + 'px';
+            bolt.style.transform = `rotate(${angle}rad)`;
+            document.body.appendChild(bolt);
+            
+            // Flash effect
+            const flash = document.querySelector('.flash');
+            flash.style.opacity = '0.8';
+            setTimeout(() => {
+                flash.style.opacity = '0';
+            }, 50);
+            
+            // Animate main bolt
+            bolt.style.opacity = '1';
+            
+            // Create branches
+            for (let i = 0; i < branches; i++) {
+                setTimeout(() => {
+                    const branchLength = length * (0.3 + Math.random() * 0.4);
+                    const branchAngle = angle + (-0.5 + Math.random()) * 0.8;
+                    const branchX = x + Math.cos(angle) * length * (0.2 + Math.random() * 0.6);
+                    const branchY = y + Math.sin(angle) * length * (0.2 + Math.random() * 0.6);
+                    
+                    const branch = document.createElement('div');
+                    branch.className = 'lightning-branch';
+                    branch.style.left = branchX + 'px';
+                    branch.style.top = branchY + 'px';
+                    branch.style.height = branchLength + 'px';
+                    branch.style.transform = `rotate(${branchAngle}rad)`;
+                    document.body.appendChild(branch);
+                    
+                    branch.style.opacity = '0.8';
+                    
+                    setTimeout(() => {
+                        branch.style.opacity = '0';
+                        setTimeout(() => {
+                            branch.remove();
+                        }, 500);
+                    }, 100 + Math.random() * 200);
+                }, 50 + i * 100);
+            }
+            
+            // Remove after animation
+            setTimeout(() => {
+                bolt.style.opacity = '0';
+                setTimeout(() => {
+                    bolt.remove();
+                }, 500);
+            }, 300);
+        }
+        // WebSocket Chat Functionality
+        let chatSocket;
+        let username = "User"; // You can modify this to get the actual username
+        
+        function connectWebSocket() {
+            chatSocket = new WebSocket("ws://" + window.location.host + "/ws/chat/");
+            
+            chatSocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const chatBox = document.getElementById("chat-box");
+                
+                // Check if this is a typing indicator
+                if (data.typing) {
+                    updateTypingIndicator(data.username, data.typing);
+                    return;
+                }
+                
+                // Regular message
+                const messageContainer = document.createElement("div");
+                messageContainer.className = `message-container ${data.username === username ? 'user' : 'admin'}`;
+                
+                const messageElement = document.createElement("div");
+                messageElement.className = data.username === username ? "message user-message" : "message admin-message";
+                
+                const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                if (data.username !== username) {
+                    // Admin/received message
+                    messageElement.innerHTML = `
+                        <div class="message-header">
+                            <div class="message-username">${data.username}</div>
+                        </div>
+                        <div class="message-content">${data.message}</div>
+                        <div class="message-footer">
+                            <div class="message-time">${timeString}</div>
+                        </div>
+                    `;
+                } else {
+                    // User/sent message
+                    messageElement.innerHTML = `
+                        <div class="message-content">${data.message}</div>
+                        <div class="message-footer">
+                            <div class="message-time">${timeString}</div>
+                        </div>
+                    `;
+                }
+                
+                messageContainer.appendChild(messageElement);
+                chatBox.appendChild(messageContainer);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                playMessageSound();
+                
+                // Add lightning effect for new messages
+                if (data.username !== username) {
+                    const rect = messageElement.getBoundingClientRect();
+                    createLightning(rect.left + rect.width/2, rect.top, 30, 2);
+                }
+            };
+            
+            chatSocket.onclose = function(e) {
+                console.error('Chat socket closed unexpectedly');
+                setTimeout(function() {
+                    connectWebSocket();
+                }, 1000);
+            };
+        }
+        // Typing indicator management
+        let typingIndicator = null;
+        let typingTimeout;
+        
+        function updateTypingIndicator(username, isTyping) {
+            const chatBox = document.getElementById("chat-box");
+            
+            if (isTyping) {
+                // Clear any existing timeout
+                if (typingTimeout) clearTimeout(typingTimeout);
+                
+                // Create new indicator if it doesn't exist
+                if (!typingIndicator) {
+                    typingIndicator = document.createElement("div");
+                    typingIndicator.className = "message-container admin";
+                    
+                    const indicatorContent = document.createElement("div");
+                    indicatorContent.className = "typing-indicator";
+                    
+                    const dotsContainer = document.createElement("div");
+                    dotsContainer.className = "typing-dots";
+                    dotsContainer.innerHTML = `
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    `;
+                    
+                    indicatorContent.innerHTML = `<span>${username} is typing</span>`;
+                    indicatorContent.appendChild(dotsContainer);
+                    typingIndicator.appendChild(indicatorContent);
+                    chatBox.appendChild(typingIndicator);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+                
+                // Set timeout to remove indicator after delay
+                typingTimeout = setTimeout(() => {
+                    if (typingIndicator) {
+                        typingIndicator.remove();
+                        typingIndicator = null;
+                    }
+                }, 2000);
+            } else if (typingIndicator) {
+                // Remove existing indicator
+                typingIndicator.remove();
+                typingIndicator = null;
+            }
+        }
+        // Send message function
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const message = messageInput.value.trim();
+            
+            if (message !== "" && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    "username": username,
+                    "message": message
+                }));
+                
+                messageInput.value = "";
+                playClickSound();
+                
+                // Create small lightning effect on send
+                const button = document.getElementById("sendButton");
+                const rect = button.getBoundingClientRect();
+                createLightning(rect.left + rect.width/2, rect.top, 20, 1);
+            }
+        }
+        // Typing detection
+        let typing = false;
+        let typingDebounce;
+        
+        document.getElementById("messageInput").addEventListener("input", function() {
+            if (!typing && chatSocket.readyState === WebSocket.OPEN) {
+                typing = true;
+                chatSocket.send(JSON.stringify({
+                    "username": username,
+                    "typing": true
+                }));
+            }
+            
+            clearTimeout(typingDebounce);
+            typingDebounce = setTimeout(() => {
+                if (typing && chatSocket.readyState === WebSocket.OPEN) {
+                    typing = false;
+                    chatSocket.send(JSON.stringify({
+                        "username": username,
+                        "typing": false
+                    }));
+                }
+            }, 1000);
+        });
+        // Enter key to send message
+        document.getElementById("messageInput").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+        // Initialize effects and WebSocket
+        document.addEventListener("DOMContentLoaded", function() {
+            playThunder();
+            playElectricSound();
+            
+            // Animation loop for particles
+            setInterval(updateParticles, 16);
+            
+            // Add hover effects to inputs and button
+            document.querySelectorAll('input, button').forEach(element => {
+                element.addEventListener('mouseenter', playHoverSound);
+            });
+            
+            // Add random lightning flash effect
+            setInterval(() => {
+                if (Math.random() > 0.9) {
+                    document.querySelector('.flash').style.opacity = '0.3';
+                    setTimeout(() => {
+                        document.querySelector('.flash').style.opacity = '0';
+                    }, 100);
+                }
+            }, 5000);
+            
+            // Add lightning effect when focusing on input
+            document.getElementById("messageInput").addEventListener('focus', function() {
+                const rect = this.getBoundingClientRect();
+                createLightning(rect.left + rect.width/2, rect.top, 50, 2);
+            });
+            
+            // Connect WebSocket
+            connectWebSocket();
+        });
     </script>
 </body>
 </html>
-

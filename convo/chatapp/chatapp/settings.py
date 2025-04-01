@@ -37,9 +37,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'channels',  # WebSocket support
-    'chat',      # Chat app
+    'channels',
+    'chat',
 ]
+
 
 ASGI_APPLICATION = "chatapp.asgi.application"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
@@ -79,7 +80,7 @@ TEMPLATES = [
     },
 ]
 
-#WSGI_APPLICATION = 'chatapp.wsgi.application'
+WSGI_APPLICATION = 'chatapp.wsgi.application'
 
 
 # Database
@@ -128,7 +129,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Point to the folder where your static files (CSS, JS, sounds) are stored
+]
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

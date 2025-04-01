@@ -3,7 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.username = self.scope["user"].username if self.scope["user"].is_authenticated else "Guest"
+        self.username = self.scope["user"].username if self.scope["user"].is_authenticated else "Admin"
         self.room_group_name = "chat_admin"  # Use a single group for all users
 
         # Join the chat group

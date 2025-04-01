@@ -1,7 +1,617 @@
-<form method="post">
-    {% csrf_token %}
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">Register</button>
-</form>
+{% load static %}
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Chat App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0A0A12;
+            --lavender: #B57EDC;
+            --lavender-dark: #8A4EBF;
+            --lavender-light: #D8B8FF;
+            --text: #E0E0FF;
+            --text-light: #FFFFFF;
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-highlight: rgba(255, 255, 255, 0.3);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Rajdhani', 'Arial Narrow', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            cursor: none;
+        }
+        /* Electric Current Cursor */
+        .electric-current {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 0 10px 2px var(--lavender-light);
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: screen;
+        }
+        .electric-trail {
+            position: fixed;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9998;
+        }
+        .electric-particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 5px 1px var(--lavender-light);
+            opacity: 0;
+        }
+        /* Thunderstorm Background */
+        .thunderstorm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                linear-gradient(to bottom,
+                    rgba(5, 5, 15, 0.9) 0%,
+                    rgba(10, 5, 20, 0.95) 100%),
+                url('https://assets.codepen.io/13471/smoke.png'),
+                url('https://assets.codepen.io/13471/rain.png');
+            animation:
+                lightning 15s infinite,
+                rain 0.5s linear infinite;
+            z-index: 0;
+        }
+        @keyframes rain {
+            0% { background-position: 0 0, 0 0, 0 0; }
+            100% { background-position: 0 0, 0 0, 0 500px; }
+        }
+        @keyframes lightning {
+            0%, 85%, 87%, 89%, 91%, 93%, 100% { opacity: 0; }
+            86%, 88%, 90%, 92% { opacity: 0.4; }
+        }
+        /* Mirror Effect Container */
+        .content {
+            background: rgba(10, 10, 18, 0.5);
+            border-radius: 12px;
+            padding: 2.5rem;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            box-shadow:
+                0 0 20px rgba(181, 126, 220, 0.3),
+                0 0 40px rgba(10, 10, 18, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+        /* Mirror Effect for Register Text */
+        h2 {
+            color: var(--text-light);
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            position: relative;
+            text-shadow: 0 0 10px var(--lavender);
+        }
+        h2::after {
+            content: 'Register';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -25px;
+            color: transparent;
+            background: linear-gradient(
+                to bottom,
+                rgba(181, 126, 220, 0.3),
+                transparent 80%
+            );
+            -webkit-background-clip: text;
+            background-clip: text;
+            transform: scaleY(-1);
+            opacity: 0.7;
+        }
+        /* Form Styles */
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .form-group {
+            position: relative;
+        }
+        input {
+            width: 100%;
+            padding: 1rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 1rem;
+            font-family: 'Rajdhani', sans-serif;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow:
+                0 0 10px rgba(181, 126, 220, 0.1),
+                inset 0 1px 1px var(--glass-highlight);
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--lavender);
+            box-shadow:
+                0 0 20px var(--lavender),
+                inset 0 1px 1px var(--glass-highlight);
+        }
+        input::placeholder {
+            color: var(--text);
+            opacity: 0.7;
+        }
+        /* Glass Buttons */
+        button[type="submit"] {
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            cursor: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            border: 1px solid var(--glass-border);
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            background: var(--glass);
+            backdrop-filter: blur(5px);
+            color: var(--text-light);
+            box-shadow:
+                0 0 10px rgba(181, 126, 220, 0.3),
+                inset 0 1px 1px var(--glass-highlight);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            --lavender: #B57EDC;
+        }
+        button[type="submit"]::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                transparent,
+                transparent,
+                var(--lavender),
+                transparent
+            );
+            transform: rotate(30deg);
+            transition: all 0.5s ease;
+        }
+        button[type="submit"]:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 0 20px var(--lavender),
+                inset 0 1px 1px var(--glass-highlight);
+            border-color: var(--lavender);
+        }
+        button[type="submit"]:hover::before {
+            left: 100%;
+        }
+        button[type="submit"]:active {
+            transform: translateY(1px);
+        }
+        button[type="submit"] i {
+            font-size: 1.2rem;
+        }
+        /* Button Pieces Effect */
+        .button-piece {
+            position: absolute;
+            background: var(--lavender);
+            border-radius: 3px;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(181, 126, 220, 0.8);
+        }
+        /* Smoke Effect */
+        .smoke {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://assets.codepen.io/13471/smoke.png');
+            animation: smoke 20s linear infinite;
+            opacity: 0.15;
+            z-index: 1;
+            pointer-events: none;
+        }
+        /* White Smoke Effect */
+        .white-smoke {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://assets.codepen.io/13471/smoke.png');
+            animation: smoke 25s linear infinite;
+            opacity: 0;
+            z-index: 3;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            filter: brightness(5);
+            transition: opacity 1s ease;
+        }
+        @keyframes smoke {
+            0% { background-position: 0 0; }
+            100% { background-position: 1000px 0; }
+        }
+        /* Lightning Effects */
+        .lightning-bolt {
+            position: fixed;
+            width: 1px;
+            background: linear-gradient(to bottom, transparent, white, transparent);
+            transform-origin: top center;
+            pointer-events: none;
+            z-index: 9997;
+            opacity: 0;
+            box-shadow: 0 0 15px white;
+        }
+        .lightning-branch {
+            position: absolute;
+            width: 1px;
+            background: white;
+            transform-origin: top center;
+            pointer-events: none;
+            z-index: 9996;
+            opacity: 0;
+            box-shadow: 0 0 5px white;
+        }
+        /* Flash Effect */
+        .flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9995;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .content {
+                padding: 1.8rem;
+            }
+            h2 {
+                font-size: 1.8rem;
+            }
+            input, button[type="submit"] {
+                font-size: 1rem;
+                padding: 0.8rem;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="thunderstorm"></div>
+    <div class="smoke"></div>
+    <div class="white-smoke"></div>
+    <div class="electric-current"></div>
+    <div class="electric-trail"></div>
+    <div class="flash"></div>
+    
+    <div class="content">
+        <h2>Register</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Username" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit" id="registerSubmit">
+                <i class="fas fa-user-plus"></i> Register
+            </button>
+        </form>
+    </div>
+    
+    <audio id="hoverSound" src="{% static 'sounds/hover.mp3' %}"></audio>
+    <audio id="clickSound" src="{% static 'sounds/click.mp3' %}"></audio>
+    <audio id="thunderSound" src="{% static 'sounds/thunder.mp3' %}" loop></audio>
+    <audio id="lightningSound" src="{% static 'sounds/lightning.mp3' %}"></audio>
+    <audio id="electricSound" src="{% static 'sounds/electric.mp3' %}" loop></audio>
+    
+    <script>
+        // Enhanced sound effects
+        function playHoverSound() {
+            const sound = document.getElementById("hoverSound");
+            sound.currentTime = 0;
+            sound.volume = 0.3;
+            sound.play();
+        }
+        function playClickSound() {
+            const sound = document.getElementById("clickSound");
+            sound.currentTime = 0;
+            sound.volume = 0.2;
+            sound.play();
+        }
+        function playLightningSound() {
+            const sound = document.getElementById("lightningSound");
+            sound.currentTime = 0;
+            sound.volume = 0.4;
+            sound.play();
+        }
+        function playElectricSound() {
+            const sound = document.getElementById("electricSound");
+            sound.currentTime = 0;
+            sound.volume = 0.2;
+            sound.play();
+        }
+        // Thunder sound with random timing
+        function playThunder() {
+            const sound = document.getElementById("thunderSound");
+            sound.volume = 0.15;
+            sound.play();
+            // Random thunder strikes
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    sound.currentTime = 0;
+                    sound.volume = 0.1 + Math.random() * 0.1;
+                    sound.play();
+                }
+            }, 10000);
+        }
+        // Electric current following cursor
+        const cursor = document.querySelector('.electric-current');
+        const trail = document.querySelector('.electric-trail');
+        let particles = [];
+        let lastPos = { x: 0, y: 0 };
+        
+        // Create electric particles
+        function createParticles(x, y) {
+            for (let i = 0; i < 3; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'electric-particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                trail.appendChild(particle);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 5 + Math.random() * 15;
+                const duration = 0.2 + Math.random() * 0.3;
+                
+                particles.push({
+                    element: particle,
+                    x: x,
+                    y: y,
+                    targetX: x + Math.cos(angle) * distance,
+                    targetY: y + Math.sin(angle) * distance,
+                    duration: duration,
+                    time: 0
+                });
+            }
+        }
+        // Update particles
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.time += 0.016;
+                const progress = Math.min(particle.time / particle.duration, 1);
+                
+                const x = particle.x + (particle.targetX - particle.x) * progress;
+                const y = particle.y + (particle.targetY - particle.y) * progress;
+                
+                particle.element.style.left = x + 'px';
+                particle.element.style.top = y + 'px';
+                particle.element.style.opacity = 1 - progress;
+                
+                if (progress === 1) {
+                    trail.removeChild(particle.element);
+                    particles.splice(index, 1);
+                }
+            });
+        }
+        // Follow mouse movement
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            cursor.style.left = x + 'px';
+            cursor.style.top = y + 'px';
+            
+            // Create electric trail
+            const dx = x - lastPos.x;
+            const dy = y - lastPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 5) {
+                createParticles(x, y);
+                lastPos = { x, y };
+            }
+        });
+        // Create realistic branching lightning
+        function createLightning(x, y, length, branches = 3, angle = -Math.PI/2) {
+            playLightningSound();
+            
+            // Main bolt
+            const bolt = document.createElement('div');
+            bolt.className = 'lightning-bolt';
+            bolt.style.left = x + 'px';
+            bolt.style.top = y + 'px';
+            bolt.style.height = length + 'px';
+            bolt.style.transform = `rotate(${angle}rad)`;
+            document.body.appendChild(bolt);
+            
+            // Flash effect
+            const flash = document.querySelector('.flash');
+            flash.style.opacity = '0.8';
+            setTimeout(() => {
+                flash.style.opacity = '0';
+            }, 50);
+            
+            // Animate main bolt
+            bolt.style.opacity = '1';
+            
+            // Create branches
+            for (let i = 0; i < branches; i++) {
+                setTimeout(() => {
+                    const branchLength = length * (0.3 + Math.random() * 0.4);
+                    const branchAngle = angle + (-0.5 + Math.random()) * 0.8;
+                    const branchX = x + Math.cos(angle) * length * (0.2 + Math.random() * 0.6);
+                    const branchY = y + Math.sin(angle) * length * (0.2 + Math.random() * 0.6);
+                    
+                    const branch = document.createElement('div');
+                    branch.className = 'lightning-branch';
+                    branch.style.left = branchX + 'px';
+                    branch.style.top = branchY + 'px';
+                    branch.style.height = branchLength + 'px';
+                    branch.style.transform = `rotate(${branchAngle}rad)`;
+                    document.body.appendChild(branch);
+                    
+                    branch.style.opacity = '0.8';
+                    
+                    setTimeout(() => {
+                        branch.style.opacity = '0';
+                        setTimeout(() => {
+                            branch.remove();
+                        }, 500);
+                    }, 100 + Math.random() * 200);
+                }, 50 + i * 100);
+            }
+            
+            // Remove after animation
+            setTimeout(() => {
+                bolt.style.opacity = '0';
+                setTimeout(() => {
+                    bolt.remove();
+                }, 500);
+            }, 300);
+        }
+        // Break button into pieces
+        function breakButton(button) {
+            const rect = button.getBoundingClientRect();
+            const buttonColor = getComputedStyle(button).getPropertyValue('--lavender');
+            
+            // Create pieces
+            const pieceCount = 10;
+            for (let i = 0; i < pieceCount; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'button-piece';
+                piece.style.left = (rect.left + rect.width * Math.random()) + 'px';
+                piece.style.top = (rect.top + rect.height * Math.random()) + 'px';
+                piece.style.width = (10 + Math.random() * 20) + 'px';
+                piece.style.height = (10 + Math.random() * 20) + 'px';
+                piece.style.background = buttonColor;
+                document.body.appendChild(piece);
+                
+                // Animate pieces
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 50 + Math.random() * 100;
+                const duration = 0.8 + Math.random() * 0.5;
+                
+                const animation = piece.animate([
+                    { 
+                        transform: 'translate(0, 0) rotate(0deg)',
+                        opacity: 1 
+                    },
+                    { 
+                        transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px) rotate(${360 * Math.random()}deg)`,
+                        opacity: 0 
+                    }
+                ], {
+                    duration: duration * 1000,
+                    easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                });
+                
+                animation.onfinish = () => piece.remove();
+            }
+            
+            // Hide original button
+            button.style.visibility = 'hidden';
+        }
+        // Form submission with effects
+        document.getElementById('registerSubmit').addEventListener('click', function(e) {
+            e.preventDefault();
+            playClickSound();
+            const button = this;
+            const form = button.closest('form');
+            const rect = button.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top;
+            
+            // Create lightning from top to button
+            createLightning(x, 0, y, 5);
+            
+            // Break button into pieces
+            breakButton(button);
+            
+            // Show white smoke
+            document.querySelector('.white-smoke').style.opacity = '0.4';
+            
+            // Submit form after animation
+            setTimeout(() => {
+                form.submit();
+            }, 1000);
+        });
+        // Initialize effects
+        document.addEventListener('DOMContentLoaded', function() {
+            playThunder();
+            playElectricSound();
+            
+            // Animation loop for particles
+            setInterval(updateParticles, 16);
+            
+            // Add hover effects to inputs and button
+            document.querySelectorAll('input, button').forEach(element => {
+                element.addEventListener('mouseenter', playHoverSound);
+            });
+            
+            // Add random lightning flash effect
+            setInterval(() => {
+                if (Math.random() > 0.9) {
+                    document.querySelector('.flash').style.opacity = '0.3';
+                    setTimeout(() => {
+                        document.querySelector('.flash').style.opacity = '0';
+                    }, 100);
+                }
+            }, 5000);
+            
+            // Add lightning effect when focusing on inputs
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('focus', function() {
+                    const rect = this.getBoundingClientRect();
+                    createLightning(rect.left + rect.width/2, rect.top, 50, 2);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
